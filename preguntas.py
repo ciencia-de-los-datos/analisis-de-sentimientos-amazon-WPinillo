@@ -22,21 +22,30 @@ def pregunta_01():
     # Etiquete la primera columna como `msg` y la segunda como `lbl`. Esta función
     # retorna el dataframe con las dos columnas.
     df = pd.read_csv(
-        'amazon_cells_labelled.tsv',
-        sep= '\t',
-        header=None,
-        names=['msg','lbl'],
+        "amazon_cells_labelled.tsv",
+        sep="\t",
+        #header="int",
+        names=["msg","lbl",],
     )
+    print(df.info())
 
     # Separe los grupos de mensajes etiquetados y no etiquetados.
-    df_tagged = df[df["lbl"].notna()]
-    df_untagged = df[df["lbl"].isna()]
+    df_tagged = df[df["lbl"].notna()] #los que no son nan
+    df_untagged = df[df["lbl"].isna()]#los que son nan
 
-    x_tagged = df_tagged["msg"]
+    x_tagged =df_tagged["msg"] #coge los valores de los mensajes para los que df no son nan, es decir estan etiquetados
+    print("x_tagged")
+    print(len(x_tagged))
     y_tagged = df_tagged["lbl"]
+    print("y_tagged")
+    print(len(y_tagged))
 
     x_untagged = df_untagged["msg"]
+    print("x_untagged")
+    print(len(x_untagged))
     y_untagged = df_untagged["lbl"]
+    print("y_untagged")
+    print(len(y_untagged))
 
     # Retorne los grupos de mensajes
     return x_tagged, y_tagged, x_untagged, y_untagged
@@ -52,7 +61,7 @@ def pregunta_02():
     from sklearn.model_selection import train_test_split
 
     # Cargue los datos generados en la pregunta 01.
-    x_tagged, y_tagged, x_untagged, y_untagged = pregunta_01()
+    x_tagged, y_tagged, x_untagged, y_untagged= pregunta_01()
 
     # Divida los datos de entrenamiento y prueba. La semilla del generador de números
     # aleatorios es 12345. Use el 10% de patrones para la muestra de prueba.
@@ -74,11 +83,11 @@ def pregunta_03():
     """
     # Importe el stemmer de Porter
     # Importe CountVectorizer
-    from sklearn.feature_extraction.text import CountVectorizer
     from nltk.stem.porter import PorterStemmer
+    from sklearn.feature_extraction.text import CountVectorizer
 
     # Cree un stemeer que use el algoritmo de Porter.
-    stemmer = PorterStemmer()
+    stemmer = PorterStemmer() #reduce la palabra a su termino raiz
 
     # Cree una instancia del analizador de palabras (build_analyzer)
     analyzer = CountVectorizer().build_analyzer()
@@ -92,15 +101,15 @@ def pregunta_04():
     Especificación del pipeline y entrenamiento
     -------------------------------------------------------------------------------------
     """
-
     # Importe CountVetorizer
     # Importe GridSearchCV
     # Importe Pipeline
     # Importe BernoulliNB
-     from sklearn.naive_bayes import BernoulliNB
     from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.model_selection import GridSearchCV
     from sklearn.pipeline import Pipeline
-    from sklearn.model_selection import 
+    from sklearn.naive_bayes import BernoulliNB
+
 
     # Cargue las variables.
     x_train, x_test, y_train, y_test = pregunta_02()
@@ -114,20 +123,21 @@ def pregunta_04():
     # inferior de 5 palabras. Solo deben analizarse palabras conformadas por
     # letras.
     countVectorizer = CountVectorizer(
-        analyzer=analyzer,
+        analyzer=analyzer,#"word"
         lowercase=True,
         stop_words="english",
-        token_pattern="[^0-9a-zA-Z]",
+        token_pattern=r"(?u)\b[a-zA-Z][a-zA-Z]+\b", # esto es mas de dos letras(dos o mas caracteres)
         binary=True,
+        #binary=True,
         max_df=1.0,
         min_df=5,
     )
-
+   
     # Cree un pipeline que contenga el CountVectorizer y el modelo de BernoulliNB.
     pipeline = Pipeline(
         steps=[
             ("countVectorizer", countVectorizer),
-            ("bernoulliModel", BernoulliNB()),
+            ("BernoulliNB", BernoulliNB()),
         ],
     )
 
@@ -135,14 +145,14 @@ def pregunta_04():
     # considerar 10 valores entre 0.1 y 1.0 para el parámetro alpha de
     # BernoulliNB.
     param_grid = {
-        "bernoulliModel__alpha": np.arange(0.1, 1.01, 0.1),
+        "BernoulliNB__alpha": np.linspace(0.1, 1,10), #arange
     }
 
     # Defina una instancia de GridSearchCV con el pipeline y el diccionario de
     # parámetros. Use cv = 5, y "accuracy" como métrica de evaluación
     gridSearchCV = GridSearchCV(
         estimator= pipeline,
-        param_grid=param_grid,
+        param_grid= param_grid,
         cv=5,
         scoring="accuracy",
         refit=True,
@@ -151,7 +161,7 @@ def pregunta_04():
 
     # Búsque la mejor combinación de regresores
     gridSearchCV.fit(x_train, y_train)
-
+    print('Score: ',gridSearchCV.score(x_train, y_train).round(4))
     # Retorne el mejor modelo
     return gridSearchCV
 
@@ -169,17 +179,17 @@ def pregunta_05():
     gridSearchCV = pregunta_04()
 
     # Cargue las variables.
-    X_train, X_test, y_train, y_test = pregunta_02()
+    x_train, x_test, y_train, y_test = pregunta_02()
 
     # Evalúe el pipeline con los datos de entrenamiento usando la matriz de confusion.
     cfm_train = confusion_matrix(
         y_true=y_train,
-        y_pred=gridSearchCV.predict(X_train),
+        y_pred=gridSearchCV.predict(x_train),
     )
 
     cfm_test = confusion_matrix(
         y_true=y_test,
-        y_pred=gridSearchCV.predict(X_test),
+        y_pred=gridSearchCV.predict(x_test),
     )
 
     # Retorne la matriz de confusion de entrenamiento y prueba
@@ -191,16 +201,16 @@ def pregunta_06():
     Pronóstico
     -------------------------------------------------------------------------------------
     """
-
     # Obtenga el pipeline de la pregunta 3.
     gridSearchCV = pregunta_04()
 
     # Cargue los datos generados en la pregunta 01.
-    x_tagged, y_tagged, x_untagged, y_untagged = pregunta_01()
+    x_tagged, y_tagged, x_untagged,  y_untagged= pregunta_01()
 
     # pronostique la polaridad del sentimiento para los datos
     # no etiquetados
-     y_untagged_pred = gridSearchCV.predict(x_untagged)
+    y_untagged_pred = gridSearchCV.predict(x_untagged)
+
 
     # Retorne el vector de predicciones
     return y_untagged_pred
